@@ -1,0 +1,16 @@
+version: 1.0
+provider:
+  name: openfaas
+  gateway: https://slackbot.fbcc.us
+functions:
+  fbc-slackbot-python:
+    lang: python3-http-debian
+    handler: ./fbc-slackbot-python
+    image: genebean/fbc-slackbot-python:latest
+    environment:
+      RAW_BODY: True
+    secrets:
+      - slack-bot-token
+      - twilio-account-sid
+      - twilio-auth-token
+      - twilio-number

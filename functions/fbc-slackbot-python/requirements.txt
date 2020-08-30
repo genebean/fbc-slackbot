@@ -1,0 +1,4 @@
+emoji_data_python
+python-dotenv
+slackclient
+twilio
