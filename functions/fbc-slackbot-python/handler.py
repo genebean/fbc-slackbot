@@ -50,7 +50,7 @@ def send_to_slack(body):
     sms_message = data['Body'][0]
     try:
         slack_client.chat_postMessage(
-            channel='#hack-time',
+            channel='#q-and-a',
             blocks=[
                 {
                     "type": "header",
