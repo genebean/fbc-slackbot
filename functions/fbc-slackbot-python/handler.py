@@ -1,6 +1,5 @@
 import emoji_data_python
 import json
-import os
 import slack
 import re
 import urllib.parse

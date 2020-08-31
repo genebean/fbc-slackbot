@@ -14,3 +14,12 @@ functions:
       - twilio-account-sid
       - twilio-auth-token
       - twilio-number
+  email-to-slack:
+    lang: python3-http-debian
+    handler: ./email-to-slack
+    image: genebean/email-to-slack:latest
+    secrets:
+      - imap-server
+      - email-account
+      - email-password
+      - slack-bot-token
