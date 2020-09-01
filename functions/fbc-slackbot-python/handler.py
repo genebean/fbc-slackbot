@@ -26,10 +26,10 @@ with open('/var/openfaas/secrets/twilio-number') as secrets_file:
 
 def handle(event, context):
     if event.method == 'POST' and event.path == '/incoming/slack':
-        res = incoming_slack(event.body)
+        res = process_incoming_slack(event.body)
         return res
     elif event.method == 'POST' and event.path == '/incoming/twilio':
-        res = send_to_slack(event.body)
+        res = send_sms_to_slack(event.body)
         return res
     elif event.method == 'POST':
         return {
@@ -43,7 +43,7 @@ def handle(event, context):
         }
 
 
-def send_to_slack(body):
+def send_sms_to_slack(body):
     data = urllib.parse.parse_qs(str(body))
     from_number = data['From'][0]
     sms_message = data['Body'][0]
@@ -97,24 +97,29 @@ def send_to_slack(body):
         }
 
 
-def incoming_slack(body):
-    attributes = json.loads(body)
-    if 'challenge' in attributes:
+def process_incoming_slack(body):
+    data = json.loads(body)
+    if 'challenge' in data:
         return {
             "statusCode": 200,
             "headers": {
                 "Content-Type": "text/plain",
             },
-            "body": str(attributes['challenge'])
+            "body": str(data['challenge'])
         }
+
     incoming_slack_message_id, slack_message, channel = parse_message(
-        attributes)
+        data)
+
     if incoming_slack_message_id and slack_message:
         destination = get_to_destination(incoming_slack_message_id, channel)
         formatted_body = emoji_data_python.replace_colons(slack_message)
+
         if destination and destination['type'] == 'phone_number':
             twilio_client.messages.create(
-                to=destination['number'], from_=twilio_number, body=formatted_body)
+                to=destination['number'],
+                from_=twilio_number,
+                body=formatted_body)
         elif destination and destination['type'] == 'email_address':
             logging.warning('An email would have been sent' +
                             destination['address'])
@@ -122,9 +127,12 @@ def incoming_slack(body):
     return {"statusCode": 200}
 
 
-def parse_message(attributes):
-    if 'event' in attributes and 'thread_ts' in attributes['event']:
-        return attributes['event']['thread_ts'], attributes['event']['text'], attributes['event']['channel']
+def parse_message(data):
+    if 'event' in data and 'thread_ts' in data['event']:
+        ts = data['event']['thread_ts']
+        text = data['event']['text']
+        channel = data['event']['channel']
+        return ts, text, channel
     return None, None, None
 
 
@@ -132,6 +140,7 @@ def get_to_destination(incoming_slack_message_id, channel):
     data = slack_client.conversations_history(
         channel=channel, latest=incoming_slack_message_id, limit=1, inclusive=1)
     logging.warning(json.dumps(data['messages'][0]))
+
     if 'bot_id' in data['messages'][0] and data['messages'][0]['blocks'][0]['text']['text'] == ':phone: Text message':
         text = data['messages'][0]['blocks'][1]['text']['text']
         logging.warning('text: ' + text)
