@@ -141,12 +141,14 @@ def get_to_destination(incoming_slack_message_id, channel):
         channel=channel, latest=incoming_slack_message_id, limit=1, inclusive=1)
     logging.warning(json.dumps(data['messages'][0]))
 
-    if 'bot_id' in data['messages'][0] and data['messages'][0]['blocks'][0]['text']['text'] == ':phone: Text message':
+    msg = data['messages'][0]
+    txt = data['messages'][0]['blocks'][0]['text']['text']
+    if 'bot_id' in msg and txt == ':phone: Text message':
         text = data['messages'][0]['blocks'][1]['text']['text']
         logging.warning('text: ' + text)
         phone_number = extract_phone_number(text)
         return phone_number
-    elif 'bot_id' in data['messages'][0] and data['messages'][0]['blocks'][0]['text']['text'] == ':mailbox_with_mail: Emailed message':
+    elif 'bot_id' in msg and txt == ':mailbox_with_mail: Emailed message':
         text = data['messages'][0]['blocks'][1]['text']['text']
         logging.warning('text: ' + text)
         email_address = extract_email_address(text)
