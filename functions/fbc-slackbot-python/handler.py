@@ -1,7 +1,6 @@
 import emoji_data_python
 import json
 import logging
-import re
 import urllib.parse
 from slack import WebClient
 from slack.errors import SlackApiError
@@ -50,7 +49,8 @@ def send_to_slack(body):
     sms_message = data['Body'][0]
     try:
         slack_client.chat_postMessage(
-            channel='#q-and-a',
+            channel='#hack-time',
+            # channel='#q-and-a',
             blocks=[
                 {
                     "type": "header",
@@ -85,7 +85,8 @@ def send_to_slack(body):
         }
     except SlackApiError as e:
         # You will get a SlackApiError if "ok" is False
-        assert e.response["error"]  # str like 'invalid_auth', 'channel_not_found'
+        # str like 'invalid_auth', 'channel_not_found'
+        assert e.response["error"]
         response_to_twilio = MessagingResponse()
         return {
             "statusCode": 500,
@@ -109,11 +110,14 @@ def incoming_slack(body):
     incoming_slack_message_id, slack_message, channel = parse_message(
         attributes)
     if incoming_slack_message_id and slack_message:
-        to_number = get_to_number(incoming_slack_message_id, channel)
+        destination = get_to_destination(incoming_slack_message_id, channel)
         formatted_body = emoji_data_python.replace_colons(slack_message)
-        if to_number:
+        if destination and destination['type'] == 'phone_number':
             twilio_client.messages.create(
-                to=to_number, from_=twilio_number, body=formatted_body)
+                to=destination['number'], from_=twilio_number, body=formatted_body)
+        elif destination and destination['type'] == 'email_address':
+            logging.warning('An email would have been sent' +
+                            destination['address'])
         return {"statusCode": 200}
     return {"statusCode": 200}
 
@@ -124,7 +128,7 @@ def parse_message(attributes):
     return None, None, None
 
 
-def get_to_number(incoming_slack_message_id, channel):
+def get_to_destination(incoming_slack_message_id, channel):
     data = slack_client.conversations_history(
         channel=channel, latest=incoming_slack_message_id, limit=1, inclusive=1)
     logging.warning(json.dumps(data['messages'][0]))
@@ -133,11 +137,34 @@ def get_to_number(incoming_slack_message_id, channel):
         logging.warning('text: ' + text)
         phone_number = extract_phone_number(text)
         return phone_number
+    elif 'bot_id' in data['messages'][0] and data['messages'][0]['blocks'][0]['text']['text'] == ':mailbox_with_mail: Emailed message':
+        text = data['messages'][0]['blocks'][1]['text']['text']
+        logging.warning('text: ' + text)
+        email_address = extract_email_address(text)
+        return email_address
     return None
 
 
 def extract_phone_number(text):
-    data = re.findall(r'\w+', text)
-    if len(data) == 2:
-        return data[1]
+    # *From*: +15556667777
+    data = text.split(' ')
+    if data[1].startswith('+'):
+        num = data[1].replace('+', '')
+        if num.isnumeric() and len(num) >= 11:
+            return {
+                'type': 'phone_number',
+                'number': data[1]
+            }
+    return None
+
+
+def extract_email_address(text):
+    # *From*: <mailto:jdoe@example.com|Jane Doe>
+    if 'mailto' in text:
+        address = text.split(':')[2].split('|')[0]
+        if len(address) > 4:
+            return {
+                'type': 'email_address',
+                'address': address
+            }
     return None

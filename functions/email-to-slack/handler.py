@@ -140,7 +140,7 @@ def send_to_slack(json_array):
                         "elements": [
                             {
                                 "type": "plain_text",
-                                "text": ":point_down: Please see the reply for the message's content",
+                                "text": ":point_down: Message content in reply",
                                 "emoji": True
                             }
                         ]
