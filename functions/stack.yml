@@ -10,7 +10,11 @@ functions:
     environment:
       RAW_BODY: True
     secrets:
+      - email-account
+      - email-password
+      - imap-server
       - slack-bot-token
+      - smtp-server
       - twilio-account-sid
       - twilio-auth-token
       - twilio-number

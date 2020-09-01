@@ -108,7 +108,8 @@ def send_to_slack(json_array):
     for email_message in data:
         try:
             response = slack_client.chat_postMessage(
-                channel='#hack-time',
+                # channel='#hack-time',
+                channel='#q-and-a',
                 blocks=[
                     {
                         "type": "header",
@@ -148,7 +149,8 @@ def send_to_slack(json_array):
                 ])
 
             slack_client.chat_postMessage(
-                channel='#hack-time',
+                # channel='#hack-time',
+                channel='#q-and-a',
                 thread_ts=response['ts'],
                 # icon_emoji=':robot_face:',
                 blocks=[
@@ -174,7 +176,8 @@ def send_to_slack(json_array):
 
         except SlackApiError as e:
             # You will get a SlackApiError if "ok" is False
-            assert e.response["error"]  # str like 'invalid_auth', 'channel_not_found'
+            # str like 'invalid_auth', 'channel_not_found'
+            assert e.response["error"]
     count = len(data)
     if count > 0:
         return str(count) + ' email(s) forwareded to Slack.'
