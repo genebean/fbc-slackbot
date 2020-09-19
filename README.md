@@ -13,8 +13,9 @@ This repository contains everything needed to deploy a Slackbot on Digital Ocean
   - [Slack app, part 1](#slack-app-part-1)
   - [Configure Gmail](#configure-gmail)
   - [Deploying needed secrets](#deploying-needed-secrets)
-  - [Deploying the Slackbot function](#deploying-the-slackbot-function)
+  - [Deploying the functions](#deploying-the-functions)
   - [Slack app, part 2](#slack-app-part-2)
+  - [Checking for emails](#checking-for-emails)
 - [Try it out](#try-it-out)
 - [Limitations](#limitations)
 - [Planned Improvements](#planned-improvements)
@@ -71,6 +72,8 @@ To use this setup you will need the following:
 The cost will depend on how much you use Twilio. So far a $5 / month Digital Ocean Droplet is working for me. The referral links from above should provide enough credits to try this out for free though.
 
 ## Deployment
+
+Though most of the work needed for this setup is handled by the "fbc-slackbot-python" function, there is also a second function called "email-to-slack" that handles checking Gmail. The process here will deploy both functions along with all the infrastructure needed to run them.
 
 ### Deployment of faasd
 
@@ -131,7 +134,7 @@ Deploy each secret via a command such as this:
 faas-cli secret create imap-server --from-literal imap.gmail.com
 ```
 
-### Deploying the Slackbot function
+### Deploying the functions
 
 - Change into the `functions` folder from the `digitalocean-terraform` folder via `cd ../functions`
 - Once in that folder, run the following commands:
@@ -150,6 +153,18 @@ Once the `fbc-slackbot-python` function is running go back to your Slack app and
 In the "Request URL" field enter your OpenFaaS URL followed by `/function/fbc-slackbot-python/incoming/slack`. For example: `https://faasd.example.com/function/fbc-slackbot-python/incoming/slack`.
 
 If all goes well, you will see "Verified" in green next to the "Request URL" heading. Once you do, select "Subscribe to events on behalf of users" and click "Add Workspace Event". Select "message.channels" from the available options.
+
+### Checking for emails
+
+A couple of minutes after creating your Droplet on Digital Ocean you should get an email containing information about how to ssh into it. Once you have this information, ssh to your new host and run `crontab -e` so that you can create a new cron job. Press `i`, and enter this:
+
+```bash
+* * * * * curl -sS https://faasd.example.com/function/email-to-slack >/dev/null 2>&1
+```
+
+After you enter this line, press the escape key to exit the editing mode and then press `:wq` to write and quit.
+
+This will cause the "email-to-slack" to be called once a minute. Each run will deliver any new emails to Slack.
 
 ## Try it out
 
